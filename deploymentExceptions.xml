@@ -1,0 +1,26 @@
+<project name="deploymentExceptions" basedir="." xmlns:sf="antlib:com.salesforce">	
+	<target name="RemoveUnwantedMetadata">
+		
+		<echo message="*** Executing RemoveUnwantedMetadata ***" />
+  	  	<echo message="updating profiles to remove Social-Post references..." />
+  	  		<replaceregexp match="^    &lt;layoutAssignments&gt;\n        &lt;layout&gt;SocialPersona-Social Persona Layout&lt;/layout&gt;\n    &lt;/layoutAssignments&gt;$" replace="" flags="gm" byline="false">
+  	  	      <fileset dir="${src.dir}/profiles" includes="**/*.profile" />
+  	  		</replaceregexp>
+  	  	  		
+  	  	<echo message="deleting Social-Post related files that we don't want to deploy..." />
+  	  	     <delete file="${src.dir}/workflows/SocialPost.workflow"/>
+  	  	     <delete file="${src.dir}/layouts/SocialPost-Social Post Layout.layout"/>
+			 <delete file="${src.dir}/objects/SocialPersona.object"/>
+
+		 <echo message="deleting workflows that we don't want to deploy..." />
+		  	  <delete file="${src.dir}/workflows/ExternalEventMapping.workflow"/>
+		  	  <delete file="${src.dir}/workflows/Question.workflow"/>
+		 	  <delete file="${src.dir}/workflows/Reply.workflow"/>
+		
+		<echo message="updating package XML to remove SocialPersona object." />
+		  	 <replaceregexp match="^    &lt;members&gt;SocialPersona&lt;/members&gt;" replace="" flags="gm" byline="false">
+		  	  	<fileset dir="${src.dir}" includes="package.xml" />
+		  	 </replaceregexp>
+	
+	</target>
+</project>

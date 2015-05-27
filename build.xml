@@ -1,76 +1,99 @@
 <project name="ciTutorial" basedir="." xmlns:sf="antlib:com.salesforce">
-    
-    <!-- Build properties -->
-    <property name="src.dir" value="../src" />
-    <property name="destructiveChanges.dir" value="../destructiveChanges" />
-    <property environment="env"/>
-    
-    <!-- Bamboo-controlled properties -->
-    <property name="sf.destructiveChanges" value="${env.bamboo_destructive_changes}"/>
-    <property name="sf.pkgContents" value="${env.bamboo_packageContents}" />
-    <property name="sf.userName" value="${env.bamboo_username}" />
-    <property name="sf.password" value="${env.bamboo_password}" />
-    <property name="sf.serverUrl" value="${env.bamboo_serverUrl}" />
-    <property name="sf.maxPoll" value="${env.bamboo_maxPoll}" />
-    <property name="sf.maxWaitMillis" value="${env.bamboo_maxWaitMillis}" />
-    <property name="sf.runAllTest" value="${env.bamboo_runAllTest}" />
-    <property name="sf.checkOnly" value="${env.bamboo_checkOnly}" />
-    
-    <!-- Build targets -->
-    <target name="build" depends="deployPackagedFilesToOrg, makeDestructiveChangesToOrg" />
-    
-    <!-- Build classpath -->
-    <path id="classpath4">
-        <fileset dir="${env.ANT_HOME}/lib" />
-    </path>
-    
-    <target name="deployPackagedFilesToOrg">
-        <taskdef name="sfdeploy" classname="com.claimvantage.force.ant.DeployWithXmlReportTask" classpathref="classpath4"/>
-        <zip destfile="${src.dir}/batch.zip" basedir="${src.dir}" includes="${sf.pkgContents}" />
-        
-        <sfdeploy
-            username="${sf.userName}"
-            password="${sf.password}"
-            serverurl="${sf.serverUrl}"
-            maxPoll="${sf.maxPoll}"
-            pollWaitMillis="${sf.maxWaitMillis}"
-            zipFile="${src.dir}/batch.zip"
-            runAllTests="${sf.runAllTest}"
-            checkOnly="${sf.checkOnly}"
-            junitreportdir="test-report-xml"
-            >
-            
-            <!-- Run all tests that match the include file name pattern -->
-            <batchtest>
-                <fileset dir="${src.dir}/classes">
-                    <include name="*Test*.cls"/>
-                </fileset>
-            </batchtest>
-        </sfdeploy>
-    </target>
-    
-    <target name="makeDestructiveChangesToOrg" if="${env.bamboo_destructive_changes}">
-        
-        <zip destfile="${src.dir}/batch.zip" basedir="${src.dir}" includes="${sf.destructiveChanges}" />
-        
-        <sfdeploy
-            username="${sf.userName}"
-            password="${sf.password}"
-            serverurl="${sf.serverUrl}"
-            maxPoll="${sf.maxPoll}"
-            pollWaitMillis="${sf.maxWaitMillis}"
-            runAllTests="false"
-            logType="Debugonly"
-            deployRoot="${destructiveChanges.dir}"
-            junitreportdir="test-report-xml"
-            >
-            <!-- Run all tests that match the include file name pattern -->
-            <batchtest>
-                <fileset dir="${src.dir}/classes">
-                    <include name="*Test*.cls"/>
-                </fileset>
-            </batchtest>
-        </sfdeploy>
-    </target>
-    
+	 
+  <!-- importing 'deploymentExceptions' XML that masters the RemoveUnwantedMetadata Task -->
+  <import file="./deploymentExceptions.xml"/>
+
+  <!-- Build properties -->
+  <property name="src.dir" value="../src" />
+  <property name="destructiveChanges.dir" value="../destructiveChanges" />
+  <property environment="env"/>
+
+
+  <!-- Bamboo properties -->
+  <property name="sf.destructiveChanges" value="${env.bamboo_destructive_changes}"/>
+  <property name="sf.pkgContents" value="applications/*.*, classes/*.*, customApplicationComponents/*.*, staticresources/*.*, labels/*.*, objects/*.*, layouts/*.*, workflows/*.*, pages/*.*, components/*.*, tabs/*.*, sites/*.*, tabs/*.*, triggers/*.*, package.xml" />
+  <property name="sf.userName" value="${env.bamboo_username}" />
+  <property name="sf.password" value="${env.bamboo_password}" />
+  <property name="sf.serverUrl" value="${env.bamboo_serverUrl}" />
+  <property name="sf.maxPoll" value="${env.bamboo_maxPoll}" />
+  <property name="sf.maxWaitMillis" value="${env.bamboo_maxWaitMillis}" />
+  <property name="sf.runAllTest" value="${env.bamboo_runAllTest}" />
+  <property name="sf.checkOnly" value="${env.bamboo_checkOnly}" />
+
+  <!-- Build classpath -->
+  <path id="classpath4">
+    <fileset dir="/usr/local/apache-ant-1.9.4/lib" />
+  </path>
+	
+  <!-- Build targets -->
+  <target name="build" depends="RemoveUnwantedMetadata, PackageAndDeployMetadata, MakeDestructiveChanges, DeleteBatchFile" />
+	
+  	<target name="PackageAndDeployMetadata">
+
+		<echo message="*** Executing DeployPackagedFilesToOrg ***" />
+	  	<echo message="Creating ZIP file from ${src.dir} with ${sf.pkgContents}" />	
+  	  	<zip destfile="${src.dir}/batch.zip" basedir="${src.dir}" includes="${sf.pkgContents}" update="true" />	
+  		
+  		
+  	<taskdef name="sfdeploy" classname="com.claimvantage.force.ant.DeployWithXmlReportTask" classpathref="classpath4"/>
+
+  		
+	    <sfdeploy
+	    	username="${sf.userName}" 
+	    	password="${sf.password}" 
+	        serverurl="${sf.serverUrl}" 
+	    	maxPoll="${sf.maxPoll}" 
+	    	pollWaitMillis="${sf.maxWaitMillis}"
+	      	zipFile="${src.dir}/batch.zip" 
+	    	runAllTests="${sf.runAllTest}"
+	    	checkOnly="${sf.checkOnly}"  
+		junitreportdir="test-report-xml"
+		>
+	    	
+			<!-- Run all tests that match the include file name pattern -->
+			<batchtest>
+				<fileset dir="${src.dir}/classes">
+					<include name="*Test*.cls"/>
+				</fileset>
+			</batchtest>
+		</sfdeploy>
+
+  	</target>
+
+
+	<target name="MakeDestructiveChanges" if="${env.bamboo_destructive_changes}"> 
+  
+		<echo message="*** Executing MakeDestructiveChangesToOrg ***" />
+	    <zip destfile="${src.dir}/batch.zip" basedir="${src.dir}" includes="${sf.destructiveChanges}" />
+	     
+        <sfdeploy 
+		username="${sf.userName}" 
+		password="${sf.password}" 
+		serverurl="${sf.serverUrl}" 
+		maxPoll="${sf.maxPoll}" 
+		pollWaitMillis="${sf.maxWaitMillis}"
+		runAllTests="false" 
+		logType="Debugonly"
+		zipfile="${src.dir}/batch.zip"
+		junitreportdir="test-report-xml"
+		>
+
+	      		<!-- Run all tests that match the include file name pattern -->
+		   	<batchtest>
+				<fileset dir="${src.dir}/classes">
+					<include name="*Test*.cls"/>
+				</fileset>
+			</batchtest>
+	     </sfdeploy>
+
+
+	</target>
+	
+	<target name="DeleteBatchFile">
+		<echo message="*** Running DeleteBatchFile ***" />
+		<echo message="Deleting batch.zip file from ${src.dir}" />
+  	  	     <delete file="${src.dir}/batch.zip"/>
+			
+	</target>
+	
 </project>
